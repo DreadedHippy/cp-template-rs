@@ -1,4 +1,4 @@
-use std::{clone, cmp::min, collections::{BTreeSet, HashMap, HashSet, VecDeque}, fmt::format, mem::swap, ops::{Add, AddAssign}};
+use std::{cell::RefCell, clone, cmp::{min, Reverse}, collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque}, fmt::{format, Binary}, hash::Hash, i64, io::Cursor, mem::swap, ops::{Add, AddAssign}, rc::Rc, result, usize};
 use std::ops::Bound::{Included, Excluded};
 
 #[allow(unused)]
@@ -62,6 +62,9 @@ macro_rules! tuple {
     };
 }
 
+type U = usize;
+type I = isize;
+type F = f64;
 
 //*! PRE-COMPUTATION
 //*! CAPACITY ERRORS
@@ -69,128 +72,116 @@ macro_rules! tuple {
 //*! NOT PROPERLY TESTING EDGE-CASES
 //*! NOT READING DOCUMENTATION OF STD TOOLS PROPERLY E.G BTREESET::RANGE() PANIC CONDITIONS
 //*! BINARY SEARCH ON SUBSTRING PROBLEMS
+//*! NEIGHBORING NUMBERS: EXPAND/SHRINK INTERVAL WINDOW */
+//*! BITMASKING: FORM YOUR TRUTH TABLES, USE U64
+//*! THINK SIMPLY !!!
+
 const MODULO: i64 = 1_000_000_007;
 
 fn main() {
-    let t = read_t!(usize);
+    let (n, q) = tuple!(read_line_t!(usize); 2);
 
-    for _ in 0..t {
-        let n = read_t!(usize);
+    let mut m = (1..=n).map(|i| (i, (i, i, i))).collect::<BTreeMap<_, _>>();
+    let mut cc = vec![1; n + 1];
 
-        solve(n);
-    }
-}
+    for _ in 0..q {
+        let ins = read_line_t!(usize);
 
+        match ins[0] {
+            1 => {
+                let (x, c) = (ins[1], ins[2]);
 
-pub fn solve(n: usize) {
-    if n == 1 {
-        println!("? 0");
-        if read_t!(i32) == 1 {
-            println!("! 0")
-        } else {
-            println!("! 1")
-        }
+                let mut i = m.range(..=x);
+                let mut p = i.next_back().map(|(&a, _)| a).unwrap_or(0);
+                let l = i.next_back().map(|(&a, _)| a).unwrap_or(0);
+                let r = m.range((x + 1)..).next().clone().map(|(&a, _)| a).unwrap_or(0);
 
-        return
-    }
-    if n == 2 {
-        println!("? 01");
-        if read_t!(i32) == 1 {
-            println!("! 01");
-            return
-        }
-        println!("? 00");
-        if read_t!(i32) == 1 {
-            println!("! 00");
-            return
-        }
-        println!("? 10");
-        if read_t!(i32) == 1 {
-            println!("! 10");
-            return;
-        }
+                let mut vp = *m.get(&p).unwrap_or(&(0, 0, 0));
+                let vl = *m.get(&l).unwrap_or(&(0, 0, 0));
+                let vr = *m.get(&r).unwrap_or(&(0, 0, 0));
 
-        println!("! 11");
+                
+                cc[vp.2] -= (vp.1 - vp.0) + 1;
+                vp.2 = c;
+                cc[c] += (vp.1 - vp.0) + 1;
 
-        return
-    }
+                if vp.2 == vl.2 {
+                    m.remove(&p);
+                    p = l;
+                    vp = merge_ranges(vl, vp);
+                }
 
-    // binary search for no of max successive 0s;
+                if vp.2 == vr.2 {
+                    m.remove(&r);
+                    vp = merge_ranges(vp, vr);
+                }
 
-    let mut l = 1; // 0 zeroes
-    let mut r = n; // n zeroes
+                m.insert(p, vp);
 
-
-    let mut mid = (l + r)/2;
-
-    while l <= r {
-        let test = std::iter::repeat('0').take(mid).collect::<String>();
-
-        println!("? {}", test);
-
-        match read_t!(i32) {
-            0 => r = mid - 1,
-            1 => l = mid +  1,
+            },
+            2 => {
+                let c = ins[1];
+                println!("{:?}", cc[c]);
+            },
             _ => {}
         }
-
-        mid = (l + r)/2
-
+        // println!("{:?}", m)
     }
 
-    // ------
-
-
-    let mut start = std::iter::repeat('0').take(mid).collect::<String>();
-
-    let mut reached_end = false;
-
-    // append more to the bck
-    while start.len() < n {
-        println!("? {}{}", start, "1");
-
-        let response = read_t!(i32);
-
-        if response == 1 {
-            start.push('1');
-            continue;
-        }
-
-        if response == 0 {
-            println!("? {}{}", start, "0");
-            
-            if read_t!(i32) == 1 {
-                start.push('0');
-            } else {
-
-                // cannot append any more to the back, append '1' to the front and move,
-                // we can do this because at the front is the initial number of max successive 0s
-                // so we can not have any other 0 in front of it, and the length of string < n
-                // hence a '1' can freely be appended to the front of the string
-                start = format!("{}{}",1,start);
-                reached_end = true;
-                break;
-            }
-        }
-    }
-
-    if reached_end {
-        
-        while start.len() < n {
-            println!("? {}{}", "1", start);
-
-            if read_t!(i32) == 1 {
-                start = format!("{}{}", "1", start);
-            } else {
-                start = format!("{}{}", "0", start);
-            }
-        }
-
-    }
-
-    println!("! {}", start);
 }
 
+
+fn merge_ranges(a: (usize, usize, usize), b: (usize, usize, usize)) -> (usize, usize, usize) {
+    (a.0.min(b.0), a.1.max(b.1), a.2)
+}
+fn vec_to_string<T: ToString>(a: Vec<T>) -> String {
+    a.iter().map(|x| x.to_string() + " ").collect::<String>().trim().to_string()
+}
+
+pub fn prime_factorization(mut number:i128) -> BTreeMap<i128, i128> {
+    let mut prime_factors: BTreeMap<i128, i128> = BTreeMap::new();
+
+    // Step 1 : Divide by 2
+    let mut freq:i128 = 0;
+
+    // You can use number % 2 == 0 also,
+    // but this method is much more efficient
+    while number&1 == 0 {
+        number >>=1;
+        // Again, You can use number /= 2 also,
+        // but this is much more efficient
+        freq+=1;
+    }
+
+    if freq > 0 {
+        prime_factors.insert(2, freq);
+    }
+
+    // Step 2 : start from 3, and go till square root of number
+    let mut i = 3;
+    while i*i <= number {
+
+        // Step 3 : Check if i is factor of number
+        if number%i==0 {
+            freq = 0;
+            while number%i==0 {
+                number/=i;
+                freq+=1;
+            }
+            prime_factors.insert(i, freq);
+        }
+        i+=2;
+    }
+
+    // Step 4 : Check if number become 1 or not
+    if number > 1 {
+        prime_factors.insert(number, 1);
+    }
+
+    return prime_factors;
+}
+
+// pub fn petr(rotations: &Vec<usize>, )
 
 // pub fn knapsack(w: usize, weights: Vec<usize>, profits: Vec<usize>, position: usize) {
 //     // position = index + 1;
@@ -337,7 +328,7 @@ pub fn max_sub_array(nums: Vec<i64>) -> (i64, usize) {
 }
 
 fn get_factors_functional(n: u64) -> Vec<u64> {
-    (1..).take_while(|&x| x * x <= n).into_iter().filter(|&x| n % x == 0).flat_map(|x| [x, n/x]).collect::<Vec<u64>>()
+    (1..).take_while(|&x| x * x <= n).into_iter().filter(|&x| n % x == 0).flat_map(|x| if x == n/x {vec![x]} else {vec![x, n/x]}).collect::<Vec<u64>>()
 }
 
 // BITWISE OPERATIONS;

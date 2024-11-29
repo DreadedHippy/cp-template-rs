@@ -1,8 +1,8 @@
-use std::{cell::RefCell, clone, cmp::{min, Reverse}, collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque}, fmt::{format, Binary}, hash::Hash, i64, io::Cursor, mem::swap, ops::{Add, AddAssign}, rc::Rc, result, usize};
+use std::{cell::RefCell, clone, cmp::{min, Ordering, Reverse}, collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque}, fmt::{format, Binary}, hash::Hash, i64, io::Cursor, mem::swap, ops::{Add, AddAssign}, rc::Rc, result, usize};
 use std::ops::Bound::{Included, Excluded};
 
 #[allow(unused)]
-macro_rules! read_line_t {
+macro_rules! cina {
     ($t:tt) => {{
         let mut temp = String::new();
         std::io::stdin().read_line(&mut temp).expect("fail");
@@ -13,7 +13,7 @@ macro_rules! read_line_t {
 }
 
 
-macro_rules! read_t {
+macro_rules! cin {
     ($t:tt) => {{
         let mut temp = String::new();
         std::io::stdin().read_line(&mut temp).expect("fail");
@@ -22,7 +22,7 @@ macro_rules! read_t {
 }
 
 #[allow(unused)]
-macro_rules! read_str {
+macro_rules! cins {
     () => {{
         let mut temp = String::new();
         std::io::stdin().read_line(&mut temp).expect("fail");
@@ -79,62 +79,71 @@ type F = f64;
 const MODULO: i64 = 1_000_000_007;
 
 fn main() {
-    let (n, q) = tuple!(read_line_t!(usize); 2);
 
-    let mut m = (1..=n).map(|i| (i, (i, i, i))).collect::<BTreeMap<_, _>>();
-    let mut cc = vec![1; n + 1];
 
-    for _ in 0..q {
-        let ins = read_line_t!(usize);
+}
 
-        match ins[0] {
-            1 => {
-                let (x, c) = (ins[1], ins[2]);
+fn solve(n: usize, k: usize, graph: Vec<HashSet<usize>>) {
+    let mut path = 0;
+    let mut paths = vec![(0, 0, 0); n + 1];
+    let mut visited = HashSet::new();
+    
+    
+    to_capital(1, &graph, &mut visited, path, &mut paths);
+    
+    paths.remove(0);
+    
+    paths.sort_unstable_by(|a, b| {
+        let a1 = (a.1 as i32 -1) - a.2 as i32;
+        let b1 = (b.1 as i32- 1) - b.2 as i32;
+        b1.cmp(&a1)
+    });
 
-                let mut i = m.range(..=x);
-                let mut p = i.next_back().map(|(&a, _)| a).unwrap_or(0);
-                let l = i.next_back().map(|(&a, _)| a).unwrap_or(0);
-                let r = m.range((x + 1)..).next().clone().map(|(&a, _)| a).unwrap_or(0);
-
-                let mut vp = *m.get(&p).unwrap_or(&(0, 0, 0));
-                let vl = *m.get(&l).unwrap_or(&(0, 0, 0));
-                let vr = *m.get(&r).unwrap_or(&(0, 0, 0));
-
-                
-                cc[vp.2] -= (vp.1 - vp.0) + 1;
-                vp.2 = c;
-                cc[c] += (vp.1 - vp.0) + 1;
-
-                if vp.2 == vl.2 {
-                    m.remove(&p);
-                    p = l;
-                    vp = merge_ranges(vl, vp);
-                }
-
-                if vp.2 == vr.2 {
-                    m.remove(&r);
-                    vp = merge_ranges(vp, vr);
-                }
-
-                m.insert(p, vp);
-
-            },
-            2 => {
-                let c = ins[1];
-                println!("{:?}", cc[c]);
-            },
-            _ => {}
-        }
-        // println!("{:?}", m)
+    let mut res = 0;
+    for i in 0..k {
+        res += paths[i].1 - paths[i].2
     }
 
+
+    println!("{:?}", res);
+
 }
 
+fn to_capital(node: usize, graph: &Vec<HashSet<usize>>, visited: &mut HashSet<usize>, mut path: usize, paths: &mut Vec<(usize, usize, usize)> ) -> usize {
+    let mut children = 1;
 
-fn merge_ranges(a: (usize, usize, usize), b: (usize, usize, usize)) -> (usize, usize, usize) {
-    (a.0.min(b.0), a.1.max(b.1), a.2)
+    path += 1;
+    visited.insert(node);
+
+
+    for &child in &graph[node] {
+        if visited.contains(&child) {continue;}
+
+        let cc = to_capital(child, graph, visited, path, paths);
+        children += cc;
+    }
+
+
+
+    paths[node] = (node, path, children);
+    path -= 1;
+
+    return children;
 }
-fn vec_to_string<T: ToString>(a: Vec<T>) -> String {
+
+fn bin_search(mut l: usize, mut r: usize, f: impl Fn(usize) -> bool) -> (usize, usize) {
+    while r > l + 1 {
+        let mid = (r + l) / 2;
+        if f(mid) {
+            r = mid;
+        } else {
+            l = mid;
+        }
+    }
+    (l, r)
+}
+
+fn vec_to_string<T: ToString>(a: &Vec<T>) -> String {
     a.iter().map(|x| x.to_string() + " ").collect::<String>().trim().to_string()
 }
 

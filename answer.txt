@@ -1,0 +1,26 @@
+
+    
+    use std::time::Instant;
+    let now = Instant::now();
+
+    'test: for _ in 0..cin!(usize) {
+        let n = cin!(u64);
+
+        let mut count  = 0;
+
+        for i in 1..=n {
+            for c in 2..=n {
+                let j = i*c;
+                if j > n {continue}
+
+                if !is_prime(c as usize) {continue}
+                count += 1;
+            }
+        }
+
+        println!("{}", count);
+    }
+
+    
+    let elapsed = now.elapsed();
+    println!("Elapsed: {:.2?}", elapsed);

@@ -1,5 +1,55 @@
-use std::{cell::RefCell, clone, cmp::{min, Ordering, Reverse}, collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque}, fmt::{format, Binary}, hash::Hash, i64, io::Cursor, mem::swap, ops::{Add, AddAssign}, rc::Rc, result, usize};
+#![allow(unused)]
+use std::{cell::RefCell, clone, cmp::{min, Ordering, Reverse}, collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque}, fmt::{format, Binary}, hash::{Hash, Hasher}, i32, i64, io::Cursor, mem::swap, ops::{Add, AddAssign}, rc::Rc, result, usize};
 use std::ops::Bound::{Included, Excluded};
+
+
+const KX: u32 = 123456789;
+const KY: u32 = 362436069;
+const KZ: u32 = 521288629;
+const KW: u32 = 88675123;
+
+
+// Random
+pub struct Rand {
+    x: u32, y: u32, z: u32, w: u32
+}
+
+impl Rand{
+    pub fn new(seed: u32) -> Rand {
+        Rand{
+            x: KX^seed, y: KY^seed,
+            z: KZ, w: KW
+        }
+    }
+
+    // Xorshift 128, taken from German Wikipedia
+    pub fn rand(&mut self) -> u32 {
+        let t = self.x^self.x.wrapping_shl(11);
+        self.x = self.y; self.y = self.z; self.z = self.w;
+        self.w ^= self.w.wrapping_shr(19)^t^t.wrapping_shr(8);
+        return self.w;
+    }
+
+    pub fn shuffle<T>(&mut self, a: &mut [T]) {
+        if a.len()==0 {return;}
+        let mut i = a.len()-1;
+        while i>0 {
+            let j = (self.rand() as usize)%(i+1);
+            a.swap(i,j);
+            i-=1;
+        }
+    }
+
+    pub fn rand_range(&mut self, a: i32, b: i32) -> i32 {
+        let m = (b-a+1) as u32;
+        return a+(self.rand()%m) as i32;
+    }
+
+    pub fn rand_float(&mut self) -> f64 {
+        (self.rand() as f64)/(<u32>::max_value() as f64)
+    }
+}
+
 
 #[allow(unused)]
 macro_rules! cina {
@@ -31,12 +81,12 @@ macro_rules! cins {
 }
 
 #[allow(unused)]
-macro_rules! read_joined_chars {
-    ($t:tt) => {{
+macro_rules! cinc {
+    () => {{
         let mut temp = String::new();
         std::io::stdin().read_line(&mut temp).expect("fail");
         temp.trim().chars()
-        .collect::<Vec<$t>>()
+        .collect::<Vec<char>>()
     }};
 }
 
@@ -80,67 +130,6 @@ const MODULO: i64 = 1_000_000_007;
 
 fn main() {
 
-
-}
-
-fn solve(n: usize, k: usize, graph: Vec<HashSet<usize>>) {
-    let mut path = 0;
-    let mut paths = vec![(0, 0, 0); n + 1];
-    let mut visited = HashSet::new();
-    
-    
-    to_capital(1, &graph, &mut visited, path, &mut paths);
-    
-    paths.remove(0);
-    
-    paths.sort_unstable_by(|a, b| {
-        let a1 = (a.1 as i32 -1) - a.2 as i32;
-        let b1 = (b.1 as i32- 1) - b.2 as i32;
-        b1.cmp(&a1)
-    });
-
-    let mut res = 0;
-    for i in 0..k {
-        res += paths[i].1 - paths[i].2
-    }
-
-
-    println!("{:?}", res);
-
-}
-
-fn to_capital(node: usize, graph: &Vec<HashSet<usize>>, visited: &mut HashSet<usize>, mut path: usize, paths: &mut Vec<(usize, usize, usize)> ) -> usize {
-    let mut children = 1;
-
-    path += 1;
-    visited.insert(node);
-
-
-    for &child in &graph[node] {
-        if visited.contains(&child) {continue;}
-
-        let cc = to_capital(child, graph, visited, path, paths);
-        children += cc;
-    }
-
-
-
-    paths[node] = (node, path, children);
-    path -= 1;
-
-    return children;
-}
-
-fn bin_search(mut l: usize, mut r: usize, f: impl Fn(usize) -> bool) -> (usize, usize) {
-    while r > l + 1 {
-        let mid = (r + l) / 2;
-        if f(mid) {
-            r = mid;
-        } else {
-            l = mid;
-        }
-    }
-    (l, r)
 }
 
 fn vec_to_string<T: ToString>(a: &Vec<T>) -> String {
